@@ -1,0 +1,23 @@
+# Pasos para ejecutar 
+
+1. oc create secret generic pipeline-git-key \
+    --from-file=ssh-privatekey=/Users/juan-garcia/.ssh/id_ed25519.pub \
+    --type=kubernetes.io/ssh-auth \
+    -n quarkus-ms
+
+2. oc secrets link default pipeline-git-key --for=pull -n quarkus-ms
+
+3.  crear el pvc 
+    oc apply -f ./my-pipeline-pvc.yaml 
+
+4.  crear el pipeline 
+    oc apply -f ./pipeline.yaml 
+    
+5.  ejecutar el pipelinerun - (opcion ejecutar el pipelineRun.yaml)
+    tkn pipeline start quarkus-expenses-services  \
+    -w name=shared-workspace,claimName=my-pipeline-pvc \
+    -p repo-url=https://github.com/arkazero/expenses-services.git \
+    -p image-name=image-registry.openshift-image-registry.svc:5000/quarkus-ms/quarkus-expenses-services:latest
+
+6. validar logs
+    tkn p logs quarkus-expenses-services    

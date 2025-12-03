@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: quarkus-ms-run
+spec:
+  pipelineRef:
+    name: quarkus-expenses-services
+  params:
+    - name: repo-url
+      value: https://github.com/arkazero/expenses-services.git
+    - name: image-name
+      value: image-registry.openshift-image-registry.svc:5000/quarkus-ms/quarkus-expenses-services:latest
+  workspaces:
+    - name: workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests: 
+              storage: 1Gi

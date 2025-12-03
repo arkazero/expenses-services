@@ -1,0 +1,70 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: quarkus-expenses-services
+spec:
+  params:
+    - name: repo-url
+      type: string
+      description: URL del repositorio Git
+      default: https://github.com/arkazero/expenses-services.git
+    - name: image-name
+      type: string
+      description: Nombre de la imagen Docker final
+      default: image-registry.openshift-image-registry.svc:5000/quarkus-ms/quarkus-expenses-services:latest
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: fetch-code
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: git-clone
+          - name: namespace
+            value: openshift-pipelines  
+      params: 
+        - name: URL
+          value: $(params.repo-url)
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+    - name: build-and-push
+      runAfter: [fetch-code]
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: buildah
+          - name: namespace
+            value: openshift-pipelines  
+      params:
+        - name: SOURCE_IMAGE_URL
+          value: $(params.repo-url)
+        - name: IMAGE
+          value: $(params.image-name)
+        - name: DOCKERFILE
+          value: $(params.repo-url)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+    - name: deploy
+      runAfter: [build-and-push]
+      taskRef:
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: openshift-client
+          - name: namespace
+            value: openshift-pipelines
+      params:
+        - name: SCRIPT
+          value: |
+            oc set image deployment/quarkus-ms-deployment $(params.image-name)
+            oc rollout status deployment/quarkus-ms-deployment
